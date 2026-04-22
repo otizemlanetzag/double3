@@ -1,8 +1,9 @@
-let onSyncAction: (name: string, value: number) => void;
-let remoteStorage: { [key: string]: number } = {};
+let lastSyncName = ""
+let lastSyncValue = 0
+let syncHandler: () => void;
 
 /**
- * חיבור לפרויקט בקבוצת רדיו
+ * חיבור לקבוצת רדיו
  */
 //% color="#4b7bec" icon="\uf0c9" block="connect to group %id"
 function connectToProject(id: number): void {
@@ -18,21 +19,36 @@ function syncVariable(name: string, value: number): void {
 }
 
 /**
- * בלוק אירוע - ללא שמות המשתנים בכותרת כדי למנוע שגיאות
+ * בלוק אירוע - נקי לגמרי בלי בלונים ובלי משתנים
  */
 //% color="#4b7bec" icon="\uf0c9" block="on received"
-//% draggableParameters="reporter"
-function onVariableReceived(handler: (name: string, value: number) => void) {
-    onSyncAction = handler;
+function onReceivedSync(handler: () => void) {
+    syncHandler = handler;
 }
 
-// קבלת הנתונים מהרדיו
-radio.onReceivedValue(function (receivedName, receivedValue) {
-    if (receivedName.indexOf("s:") == 0) {
-        let cleanName = receivedName.substr(2);
-        remoteStorage[cleanName] = receivedValue;
-        if (onSyncAction) {
-            onSyncAction(cleanName, receivedValue);
+/**
+ * שם המשתנה האחרון שהגיע
+ */
+//% color="#4b7bec" icon="\uf0c9" block="synced name"
+function syncedName(): string {
+    return lastSyncName;
+}
+
+/**
+ * ערך המשתנה האחרון שהגיע
+ */
+//% color="#4b7bec" icon="\uf0c9" block="synced value"
+function syncedValue(): number {
+    return lastSyncValue;
+}
+
+// ניהול קבלת הנתונים
+radio.onReceivedValue(function (name, value) {
+    if (name.indexOf("s:") == 0) {
+        lastSyncName = name.substr(2);
+        lastSyncValue = value;
+        if (syncHandler) {
+            syncHandler();
         }
     }
 })
